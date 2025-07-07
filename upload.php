@@ -1,11 +1,13 @@
 <?php
 session_start();
+?>
+<?php
 if (!isset($_SESSION['user'])) {
-    header('Location: index.php');
-    exit;
+    // header('Location: index.php'); exit;
+    echo '<meta http-equiv="refresh" content="0;url=index.php">'; exit;
 }
 include 'header.php';
-
+// ini_set('display_errors', 1); ini_set('display_startup_errors', 1); error_reporting(E_ALL);
 // Directory for uploads and responses
 $upload_dir = __DIR__ . '/upload/';
 if (!is_dir($upload_dir)) {
@@ -28,8 +30,8 @@ $workflow_response = '';
 if (isset($_POST['back'])) {
     if ($step > 1) {
         $_SESSION['step'] = $step - 1;
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // header('Location: ' . $_SERVER['PHP_SELF']); exit;
+        echo '<meta http-equiv="refresh" content="0;url='.$_SERVER['PHP_SELF'].'">'; exit;
     }
 }
 
@@ -42,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $apiKey = 'app-nRYeinE3bte2rDVxgoyGiAjw';
         $local_doc_path = $upload_dir . 'uploaded_document_' . $fileName;
         move_uploaded_file($filePath, $local_doc_path);
+        
+        $mimeType = guessMimeType($local_doc_path);
 
         $curl = curl_init();
         curl_setopt_array($curl, [
@@ -52,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "Authorization: Bearer $apiKey"
             ],
             CURLOPT_POSTFIELDS => [
-                'file' => new CURLFile($local_doc_path, mime_content_type($local_doc_path), $fileName),
+                'file' => new CURLFile($local_doc_path, $mimeType, $fileName),
                 'user' => $user
             ]
         ]);
@@ -77,8 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['doc_name'] = $fileName;
             $_SESSION['doc_local'] = basename($local_doc_path);
             $_SESSION['step'] = 2;
-            header('Location: ' . $_SERVER['PHP_SELF']);
-            exit;
+            // header('Location: ' . $_SERVER['PHP_SELF']); exit;
+            echo '<meta http-equiv="refresh" content="0;url='.$_SERVER['PHP_SELF'].'">'; exit;
         }
     }
     // Step 2: Upload audio
@@ -90,6 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $local_audio_path = $upload_dir . 'uploaded_audio_' . $audioName;
         move_uploaded_file($audioPath, $local_audio_path);
 
+        $aMimeType = guessMimeType($local_audio_path);
+
         $curl = curl_init();
         curl_setopt_array($curl, [
             CURLOPT_URL => "https://api.dify.ai/v1/files/upload",
@@ -99,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "Authorization: Bearer $apiKey"
             ],
             CURLOPT_POSTFIELDS => [
-                'file' => new CURLFile($local_audio_path, mime_content_type($local_audio_path), $audioName),
+                'file' => new CURLFile($local_audio_path, $aMimeType, $audioName),
                 'user' => $user
             ]
         ]);
@@ -124,8 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['audio_name'] = $audioName;
             $_SESSION['audio_local'] = basename($local_audio_path);
             $_SESSION['step'] = 3;
-            header('Location: ' . $_SERVER['PHP_SELF']);
-            exit;
+            // header('Location: ' . $_SERVER['PHP_SELF']); exit;
+            echo '<meta http-equiv="refresh" content="0;url='.$_SERVER['PHP_SELF'].'">'; exit;
         }
     }
     // Step 3: Run workflow
@@ -175,21 +181,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         file_put_contents($upload_dir . 'run_workflow.json', $workflow_response);
         $_SESSION['workflow_response'] = $workflow_response;
         $_SESSION['step'] = 4;
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // header('Location: ' . $_SERVER['PHP_SELF']); exit;
+        echo '<meta http-equiv="refresh" content="0;url='.$_SERVER['PHP_SELF'].'">'; exit;
     }
     // Step 4: Reset
     if (isset($_POST['reset'])) {
         session_destroy();
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // header('Location: ' . $_SERVER['PHP_SELF']); exit;
+        echo '<meta http-equiv="refresh" content="0;url='.$_SERVER['PHP_SELF'].'">'; exit;
     }
     // Add PHP handler for 'clear' button to reset stepper and move to initial step
     if (isset($_POST['clear'])) {
         session_destroy();
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit;
+        // header('Location: ' . $_SERVER['PHP_SELF']); exit;
+        echo '<meta http-equiv="refresh" content="0;url='.$_SERVER['PHP_SELF'].'">'; exit;
     }
+}
+
+function guessMimeType($filename) {
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    $mimeTypes = [
+        'pdf' => 'application/pdf',
+        'jpg' => 'image/jpeg',
+        'jpeg'=> 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'txt' => 'text/plain',
+        'doc' => 'application/msword',
+        'docx'=> 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel',
+        'xlsx'=> 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        // Add more types as needed
+    ];
+    return $mimeTypes[$ext] ?? 'application/octet-stream';
 }
 
 // For displaying details

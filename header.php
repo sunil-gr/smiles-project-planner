@@ -1,6 +1,3 @@
-<?php
-// header.php
-?>
 <div class="custom-header">
     <div class="header-logo-title">
         <img src="logo.png" alt="Logo" class="header-logo">
